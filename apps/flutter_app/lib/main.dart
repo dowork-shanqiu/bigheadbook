@@ -48,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _loggingIn = false;
   String? _message;
   bool _messageIsPositive = false;
-  LoginResult? _latestLoginResult;
+  bool _hasSessionToken = false;
 
   @override
   void initState() {
@@ -119,7 +119,8 @@ class _LoginPageState extends State<LoginPage> {
             ? _totpController.text.trim()
             : null,
       );
-      _latestLoginResult = loginResult;
+      _hasSessionToken = (loginResult.accessToken?.isNotEmpty == true) ||
+          (loginResult.refreshToken?.isNotEmpty == true);
       _passwordController.clear();
       _totpController.clear();
       setState(() {
@@ -130,6 +131,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _message = '登录失败: $error';
         _messageIsPositive = false;
+        _hasSessionToken = false;
       });
     } finally {
       if (mounted) {
@@ -237,7 +239,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ],
               ),
-              if (_latestLoginResult != null) ...[
+              if (_hasSessionToken) ...[
                 const SizedBox(height: 4),
                 Text(
                   '已获取访问令牌（当前会话内使用）',
@@ -458,15 +460,11 @@ class AuthApiClient {
     required String password,
     String? totpCode,
   }) async {
-    final body = <String, String>{
+    final payload = jsonEncode(<String, String>{
       'username': username,
       'password': password,
       if (totpCode != null && totpCode.isNotEmpty) 'totp_code': totpCode,
-    };
-    final payload = jsonEncode(body);
-    body
-      ..update('password', (_) => '')
-      ..clear();
+    });
     final response = await _client
         .post(
           _uri('/api/v1/auth/login'),

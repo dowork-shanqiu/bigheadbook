@@ -6,8 +6,8 @@ class Transaction {
     required this.amount,
     required this.currency,
     this.note,
-    DateTime? occurredAt,
-  }) : occurredAt = occurredAt ?? DateTime.now();
+    required this.occurredAt,
+  });
 
   final double amount;
   final String currency;

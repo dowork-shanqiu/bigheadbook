@@ -10,8 +10,9 @@ int crosscore_init(void) {
 }
 
 int crosscore_add_transaction(double amount, const char* currency, const char* note) {
-  (void)currency;
-  (void)note;
+  if (currency == NULL) {
+    return -1;
+  }
   g_balance += amount;
   g_total_count += 1;
   return 0;

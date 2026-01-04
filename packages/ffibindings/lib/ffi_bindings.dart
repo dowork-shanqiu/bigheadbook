@@ -3,6 +3,21 @@ import 'dart:io' show Platform;
 
 import 'package:ffi/ffi.dart' as pkg_ffi;
 
+final class CrossCoreSummary extends ffi.Struct {
+  @ffi.Double()
+  external double balance;
+
+  @ffi.Int32()
+  external int totalCount;
+}
+
+class CrossCoreSummaryData {
+  const CrossCoreSummaryData({required this.balance, required this.totalCount});
+
+  final double balance;
+  final int totalCount;
+}
+
 /// Lightweight dart:ffi wrapper for the cross-platform core.
 class CrossCoreBindings {
   CrossCoreBindings({ffi.DynamicLibrary? library})
@@ -31,31 +46,40 @@ class CrossCoreBindings {
   }) {
     final currencyPtr =
         currency.toNativeUtf8(allocator: pkg_ffi.malloc);
-    final notePtr = (note ?? '')
-        .toNativeUtf8(allocator: pkg_ffi.malloc);
-    final result = _addTransaction(amount, currencyPtr, notePtr);
-    pkg_ffi.malloc.free(currencyPtr);
-    pkg_ffi.malloc.free(notePtr);
-    return result;
+    final notePtr = note == null
+        ? ffi.Pointer<ffi.Utf8>.fromAddress(0)
+        : note.toNativeUtf8(allocator: pkg_ffi.malloc);
+    try {
+      return _addTransaction(amount, currencyPtr, notePtr);
+    } finally {
+      pkg_ffi.malloc.free(currencyPtr);
+      if (notePtr.address != 0) {
+        pkg_ffi.malloc.free(notePtr);
+      }
+    }
   }
 
-  CrossCoreSummary querySummary() {
-    final summary = pkg_ffi.malloc<SummaryStruct>();
+  CrossCoreSummaryData querySummary() {
+    final summary = pkg_ffi.malloc<CrossCoreSummary>();
     final code = _querySummary(summary);
     try {
       if (code != 0) {
         throw StateError('querySummary failed with code $code');
       }
-      return CrossCoreSummary(
+      return CrossCoreSummaryData(
         balance: summary.ref.balance,
         totalCount: summary.ref.totalCount,
       );
     } finally {
-      ffi.malloc.free(summary);
+      pkg_ffi.malloc.free(summary);
     }
   }
 
   static ffi.DynamicLibrary _openDefaultLibrary() {
+    final envPath = Platform.environment['CROSS_CORE_LIB_PATH'];
+    if (envPath != null && envPath.isNotEmpty) {
+      return ffi.DynamicLibrary.open(envPath);
+    }
     if (Platform.isMacOS || Platform.isIOS) {
       return ffi.DynamicLibrary.open('libcross_core.dylib');
     }
@@ -67,22 +91,6 @@ class CrossCoreBindings {
     }
     throw UnsupportedError('Unsupported platform ${Platform.operatingSystem}');
   }
-}
-
-class CrossCoreSummary {
-  const CrossCoreSummary({required this.balance, required this.totalCount});
-
-  final double balance;
-  final int totalCount;
-}
-
-final class SummaryStruct extends ffi.Struct {
-  @ffi.Double()
-  external double balance;
-
-  @ffi.Int32()
-  external int totalCount;
-}
 
 typedef _InitNative = ffi.Int32 Function();
 typedef _InitDart = int Function();
@@ -99,6 +107,8 @@ typedef _AddTxDart = int Function(
 );
 
 typedef _QuerySummaryNative = ffi.Int32 Function(
-  ffi.Pointer<SummaryStruct> summary,
+  ffi.Pointer<CrossCoreSummary> summary,
 );
-typedef _QuerySummaryDart = int Function(ffi.Pointer<SummaryStruct> summary);
+typedef _QuerySummaryDart = int Function(
+  ffi.Pointer<CrossCoreSummary> summary,
+);

@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   flutter-analyze-test:
     runs-on: ubuntu-latest
@@ -71,8 +74,12 @@ jobs:
         uses: actions/checkout@v4
       - name: Build cross_core
         working-directory: native/cross_core
+        shell: bash
         run: |
+          set -e
           clang -c cross_core.c -o cross_core.o
-          clang -shared cross_core.o -o libcross_core.$([[ "$RUNNER_OS" == "macOS" ]] && echo "dylib" || echo "so")
+          EXT="so"
+          if [ "$RUNNER_OS" = "macOS" ]; then EXT="dylib"; fi
+          clang -shared cross_core.o -o "libcross_core.${EXT}"
       - name: TODO for advanced builds
         run: echo "Add platform-specific toolchains, NDK/iOS/Harmony builds here"

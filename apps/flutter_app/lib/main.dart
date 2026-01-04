@@ -119,8 +119,7 @@ class _LoginPageState extends State<LoginPage> {
             ? _totpController.text.trim()
             : null,
       );
-      _hasSessionToken = (loginResult.accessToken?.isNotEmpty == true) ||
-          (loginResult.refreshToken?.isNotEmpty == true);
+      _hasSessionToken = loginResult.hasToken;
       _passwordController.clear();
       _totpController.clear();
       setState(() {
@@ -242,7 +241,7 @@ class _LoginPageState extends State<LoginPage> {
               if (_hasSessionToken) ...[
                 const SizedBox(height: 4),
                 Text(
-                  '已获取访问令牌（当前会话内使用）',
+                  '已建立会话（当前未持久化）',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -409,6 +408,9 @@ class LoginResult {
     );
   }
 
+  bool get hasToken =>
+      (accessToken?.isNotEmpty == true) || (refreshToken?.isNotEmpty == true);
+
   final String? accessToken;
   final String? refreshToken;
   final bool? requireTotp;
@@ -441,9 +443,6 @@ class AuthApiClient {
   }
 
   Map<String, String> get _jsonHeaders => {'Content-Type': 'application/json'};
-  LoginResult? _lastLoginResult;
-
-  LoginResult? get lastLoginResult => _lastLoginResult;
 
   Future<AuthStatus> fetchStatus() async {
     final response = await _client
@@ -476,10 +475,11 @@ class AuthApiClient {
       response,
       LoginResult.fromJson,
     );
-    _lastLoginResult = parsed;
     return parsed;
   }
 
+  /// Decode xuannexus-style responses.
+  /// Supports both wrapped `{code, data, message}` payloads and plain objects.
   T _decodeResponse<T>(
     http.Response response,
     T Function(Map<String, dynamic> json) parser,

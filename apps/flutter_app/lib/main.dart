@@ -101,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
       _message = null;
     });
     try {
-      final result = await _apiClient.login(
+      await _apiClient.login(
         username: _usernameController.text.trim(),
         password: _passwordController.text,
         totpCode: _status?.totpEnabled == true &&
@@ -109,11 +109,8 @@ class _LoginPageState extends State<LoginPage> {
             ? _totpController.text.trim()
             : null,
       );
-      final token = result.accessToken;
       setState(() {
-        _message = token == null || token.isEmpty
-            ? '登录成功'
-            : '登录成功，accessToken: ${_shortToken(token)}';
+        _message = '登录成功';
       });
     } catch (error) {
       setState(() {
@@ -126,11 +123,6 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
-  }
-
-  String _shortToken(String token) {
-    if (token.length <= 16) return token;
-    return '${token.substring(0, 8)}…${token.substring(token.length - 4)}';
   }
 
   bool get _showRegister {

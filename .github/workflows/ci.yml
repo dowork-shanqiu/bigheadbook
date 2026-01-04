@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-analyze-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Fetch dependencies
+        working-directory: apps/flutter_app
+        run: flutter pub get
+      - name: Analyze
+        working-directory: apps/flutter_app
+        run: flutter analyze
+      - name: Test
+        working-directory: apps/flutter_app
+        run: flutter test
+
+  android-build:
+    runs-on: ubuntu-latest
+    needs: flutter-analyze-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Fetch dependencies
+        working-directory: apps/flutter_app
+        run: flutter pub get
+      - name: Build APK
+        working-directory: apps/flutter_app
+        run: flutter build apk --debug
+
+  ios-build:
+    runs-on: macos-latest
+    needs: flutter-analyze-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Fetch dependencies
+        working-directory: apps/flutter_app
+        run: flutter pub get
+      - name: Build iOS (no codesign)
+        working-directory: apps/flutter_app
+        run: flutter build ios --no-codesign
+      - name: Codesign placeholder
+        run: echo "TODO: configure signing certificates/profiles for App Store/TestFlight"
+
+  native-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build cross_core
+        working-directory: native/cross_core
+        shell: bash
+        run: |
+          set -e
+          clang -c cross_core.c -o cross_core.o
+          EXT="so"
+          if [ "$RUNNER_OS" = "macOS" ]; then EXT="dylib"; fi
+          clang -shared cross_core.o -o "libcross_core.${EXT}"
+      - name: TODO for advanced builds
+        run: echo "Add platform-specific toolchains, NDK/iOS/Harmony builds here"

@@ -48,6 +48,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _loggingIn = false;
   String? _message;
   bool _messageIsPositive = false;
+  // 标记当前会话已获取令牌，仅驻留内存。后续将接入安全存储以支持持久化。
   bool _hasSessionToken = false;
 
   @override
@@ -459,6 +460,7 @@ class AuthApiClient {
     required String password,
     String? totpCode,
   }) async {
+    // 与 xuannexus 后端保持一致，凭证通过 HTTPS 直接提交，后端完成校验/加密。
     final payload = jsonEncode(<String, String>{
       'username': username,
       'password': password,
@@ -485,9 +487,7 @@ class AuthApiClient {
     T Function(Map<String, dynamic> json) parser,
   ) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final bodyInfo =
-          response.body.isNotEmpty ? ' (response ${response.body.length} bytes)' : '';
-      throw Exception('HTTP ${response.statusCode}$bodyInfo');
+      throw Exception('HTTP ${response.statusCode}');
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {

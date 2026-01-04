@@ -1,0 +1,13 @@
+name: core
+description: Core business logic for wood ledger (Dart layer).
+version: 0.0.1
+publish_to: "none"
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  meta: ^1.11.0
+
+dev_dependencies:
+  lints: ^2.1.0

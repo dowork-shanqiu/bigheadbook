@@ -48,6 +48,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _loggingIn = false;
   String? _message;
   bool _messageIsPositive = false;
+  LoginResult? _latestLoginResult;
 
   @override
   void initState() {
@@ -110,7 +111,7 @@ class _LoginPageState extends State<LoginPage> {
       _messageIsPositive = false;
     });
     try {
-      await _apiClient.login(
+      final loginResult = await _apiClient.login(
         username: _usernameController.text.trim(),
         password: _passwordController.text,
         totpCode: _status?.totpEnabled == true &&
@@ -118,6 +119,9 @@ class _LoginPageState extends State<LoginPage> {
             ? _totpController.text.trim()
             : null,
       );
+      _latestLoginResult = loginResult;
+      _passwordController.clear();
+      _totpController.clear();
       setState(() {
         _message = '登录成功';
         _messageIsPositive = true;
@@ -233,6 +237,13 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ],
               ),
+              if (_latestLoginResult != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '已获取访问令牌（当前会话内使用）',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ],
             if (_message != null) ...[
               const SizedBox(height: 8),
@@ -428,6 +439,9 @@ class AuthApiClient {
   }
 
   Map<String, String> get _jsonHeaders => {'Content-Type': 'application/json'};
+  LoginResult? _lastLoginResult;
+
+  LoginResult? get lastLoginResult => _lastLoginResult;
 
   Future<AuthStatus> fetchStatus() async {
     final response = await _client
@@ -444,22 +458,28 @@ class AuthApiClient {
     required String password,
     String? totpCode,
   }) async {
-    final body = {
+    final body = <String, String>{
       'username': username,
       'password': password,
       if (totpCode != null && totpCode.isNotEmpty) 'totp_code': totpCode,
     };
+    final payload = jsonEncode(body);
+    body
+      ..update('password', (_) => '')
+      ..clear();
     final response = await _client
         .post(
           _uri('/api/v1/auth/login'),
           headers: _jsonHeaders,
-          body: jsonEncode(body),
+          body: payload,
         )
         .timeout(kRequestTimeout);
-    return _decodeResponse<LoginResult>(
+    final parsed = _decodeResponse<LoginResult>(
       response,
       LoginResult.fromJson,
     );
+    _lastLoginResult = parsed;
+    return parsed;
   }
 
   T _decodeResponse<T>(
@@ -467,10 +487,9 @@ class AuthApiClient {
     T Function(Map<String, dynamic> json) parser,
   ) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final preview = response.body.isEmpty
-          ? ''
-          : ': ${response.body.length > 200 ? '${response.body.substring(0, 200)}…' : response.body}';
-      throw Exception('HTTP ${response.statusCode}$preview');
+      final bodyInfo =
+          response.body.isNotEmpty ? ' (response ${response.body.length} bytes)' : '';
+      throw Exception('HTTP ${response.statusCode}$bodyInfo');
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {

@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package bigheadbook.ledger.v1;
+
+// Basic transaction record.
+message Transaction {
+  double amount = 1;
+  string currency = 2;
+  string note = 3;
+  int64 occurred_at_epoch_ms = 4;
+}
+
+// Aggregated summary result.
+message Summary {
+  double balance = 1;
+  int32 total_count = 2;
+}
+
+message InitRequest {}
+message InitResponse {
+  int32 code = 1;
+}
+
+message AddTransactionRequest {
+  Transaction transaction = 1;
+}
+message AddTransactionResponse {
+  int32 code = 1;
+}
+
+message QuerySummaryRequest {}
+message QuerySummaryResponse {
+  int32 code = 1;
+  Summary summary = 2;
+}

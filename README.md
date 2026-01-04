@@ -1,4 +1,4 @@
-# 木木记账（bigheadbook）
+# 大头记账（bigheadbook）
 
 一个面向多平台的记账应用基线。短期以 **Flutter** 为主要前端（Android/iOS），长期目标扩展到 **Harmony Next（ArkUI-X）** 及其他原生平台，通过复用同一套跨平台核心库（预编译二进制或 C ABI）。
 

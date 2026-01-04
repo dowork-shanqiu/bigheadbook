@@ -10,7 +10,7 @@ class BigHeadBookApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '木木记账',
+      title: '大头记账',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
@@ -26,7 +26,7 @@ class _HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('木木记账 · BigHeadBook')),
+      appBar: AppBar(title: const Text('大头记账 · BigHeadBook')),
       body: const Center(
         child: Text('Hello, world! 准备好记一笔了吗？'),
       ),

@@ -11,6 +11,7 @@
 - 推荐使用 **protobuf** 定义交易、账户、统计等消息，以便跨语言一致性。
 - Dart/Flutter 可通过 `protobuf` 插件生成代码；原生层可用 `protoc` 对应语言插件生成。
 - 与原生库交互时，可通过 C ABI 传递序列化后的二进制（`uint8_t*` + length），避免结构体对齐问题。
+- 当前示例 schema：`native/cross_core/proto/ledger.proto`（Transaction / Summary / Init / Query）。
 
 ## FFI/ABI 设计要点
 - 保持 C ABI（`extern "C"` + `typedef struct`），避免 C++ 名字改编。

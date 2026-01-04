@@ -47,12 +47,12 @@ class _LoginPageState extends State<LoginPage> {
   bool _loadingStatus = false;
   bool _loggingIn = false;
   String? _message;
+  bool _messageIsPositive = false;
 
   @override
   void initState() {
     super.initState();
     _apiClient = widget.apiClient ?? AuthApiClient(baseUrl: kDefaultBaseUrl);
-    _baseUrlController.addListener(_handleBaseUrlChange);
     _fetchStatus();
   }
 
@@ -65,25 +65,32 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _handleBaseUrlChange() {
-    _apiClient.baseUrl = _baseUrlController.text.trim();
+  void _syncBaseUrl() {
+    final next = _baseUrlController.text.trim();
+    if (next.isNotEmpty) {
+      _apiClient.baseUrl = next;
+    }
   }
 
   Future<void> _fetchStatus() async {
+    _syncBaseUrl();
     setState(() {
       _loadingStatus = true;
       _message = null;
+      _messageIsPositive = false;
     });
     try {
       final status = await _apiClient.fetchStatus();
       setState(() {
         _status = status;
         _message = '已连接 ${_apiClient.baseUrl}';
+        _messageIsPositive = true;
       });
     } catch (error) {
       setState(() {
         _status = null;
         _message = '获取状态失败: $error';
+        _messageIsPositive = false;
       });
     } finally {
       if (mounted) {
@@ -96,9 +103,11 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    _syncBaseUrl();
     setState(() {
       _loggingIn = true;
       _message = null;
+      _messageIsPositive = false;
     });
     try {
       await _apiClient.login(
@@ -111,10 +120,12 @@ class _LoginPageState extends State<LoginPage> {
       );
       setState(() {
         _message = '登录成功';
+        _messageIsPositive = true;
       });
     } catch (error) {
       setState(() {
         _message = '登录失败: $error';
+        _messageIsPositive = false;
       });
     } finally {
       if (mounted) {
@@ -228,10 +239,8 @@ class _LoginPageState extends State<LoginPage> {
               Text(
                 _message!,
                 style: TextStyle(
-                  color: _message!.startsWith('登录成功') ||
-                          _message!.startsWith('已连接')
-                      ? Colors.green[700]
-                      : Colors.red[700],
+                  color:
+                      _messageIsPositive ? Colors.green[700] : Colors.red[700],
                 ),
               ),
             ],
@@ -406,7 +415,9 @@ class AuthApiClient {
   String get baseUrl => _baseUrl;
 
   set baseUrl(String value) {
-    _baseUrl = value.isEmpty ? kDefaultBaseUrl : value;
+    final normalized = value.trim();
+    if (normalized.isEmpty) return;
+    _baseUrl = normalized;
   }
 
   Uri _uri(String path) {
@@ -456,7 +467,10 @@ class AuthApiClient {
     T Function(Map<String, dynamic> json) parser,
   ) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('HTTP ${response.statusCode}');
+      final preview = response.body.isEmpty
+          ? ''
+          : ': ${response.body.length > 200 ? '${response.body.substring(0, 200)}…' : response.body}';
+      throw Exception('HTTP ${response.statusCode}$preview');
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
